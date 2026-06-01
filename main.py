@@ -92,29 +92,54 @@ if page == "Main Runtime":
                 st.warning("Please enter a query")
             else:
                 with st.spinner("🔍 Agentic RAG in progress..."):
-                    result = subprocess.run(
-                        [r".\.venv\Scripts\python.exe", "agentic_query.py"],
-                        input=query,
+                    process = subprocess.Popen(
+                        [r".\.venv\Scripts\python.exe", "-u", "agentic_query.py"],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                         text=True,
-                        capture_output=True
+                        bufsize=1
                     )
-
-                if result.stdout:
-                    # Try to separate Analysis from other logs
-                    if "========== ANALYSIS ==========" in result.stdout:
-                        parts = result.stdout.split("========== ANALYSIS ==========")
-                        st.subheader("📊 Analysis Report")
-                        st.markdown(parts[1])
+                    
+                    # Pass the query to stdin
+                    process.stdin.write(query + "\n")
+                    process.stdin.flush()
+                    
+                    st.subheader("📊 Analysis Report")
+                    report_placeholder = st.empty()
+                    log_placeholder = st.empty()
+                    
+                    full_output = ""
+                    analysis_content = ""
+                    is_analysis = False
+                    
+                    # Stream output from the process
+                    for line in iter(process.stdout.readline, ""):
+                        full_output += line
+                        if "========== ANALYSIS ==========" in line:
+                            is_analysis = True
+                            continue
                         
-                        with st.expander("View Execution Logs"):
-                            st.code(parts[0], language="text")
-                    else:
-                        st.subheader("Raw Output")
-                        st.code(result.stdout, language="text")
+                        if is_analysis:
+                            analysis_content += line
+                            report_placeholder.markdown(analysis_content)
+                        else:
+                            # Show logs in a small area while waiting for analysis
+                            log_placeholder.caption(f"Logs: {line.strip()}")
+                    
+                    process.stdout.close()
+                    return_code = process.wait()
+                    
+                    # Final cleanup
+                    log_placeholder.empty()
+                    with st.expander("View Execution Logs"):
+                        st.code(full_output, language="text")
 
-                if result.stderr:
-                    with st.expander("Errors", expanded=False):
-                        st.code(result.stderr, language="text")
+                if process.returncode != 0:
+                    stderr = process.stderr.read()
+                    if stderr:
+                        with st.expander("Errors", expanded=True):
+                            st.code(stderr, language="text")
 
     with col2:
         st.subheader("Example Queries")

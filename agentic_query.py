@@ -393,19 +393,15 @@ Explain:
 """
 
 # -----------------------------
-# FINAL ANALYSIS
-# -----------------------------
-
-analysis_response = llm.invoke(
-    analysis_prompt
-)
-
-# -----------------------------
-# OUTPUT
+# FINAL ANALYSIS (STREAMING)
 # -----------------------------
 
 print("\n========== ANALYSIS ==========\n")
 
-print(
-    analysis_response.content
-)
+for chunk in llm.stream(analysis_prompt):
+
+    print(
+        chunk.content,
+        end="",
+        flush=True
+    )

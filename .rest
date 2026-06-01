@@ -1,0 +1,8 @@
+POST http://192.168.1.10:11434/api/generate
+Content-Type: application/json
+
+{
+    "model": "llama3.2:1b",
+    "prompt": "Explain VPC Flow Logs in one paragraph.",
+    "stream": false
+}
