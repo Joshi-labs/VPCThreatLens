@@ -99,15 +99,19 @@ async def investigate(request: QueryRequest):
         elif len(filters) > 1: where_filter = {"$and": filters}
 
         # 4. Vector Search (Manual Embedding via Ollama)
+        print(f"DEBUG: Vectorizing user query: {user_query}")
         query_embedding = embeddings_model.embed_query(user_query)
         
         if where_filter is None:
             results = collection.query(query_embeddings=[query_embedding], n_results=5)
         else:
-            results = collection.query(query_embeddings=[query_embedding], n_results=5, where=where_filter)
+            print(f"DEBUG: Applying filter: {where_filter}")
+            results = collection.query(query_embeddings=[query_embeddings], n_results=5, where=where_filter)
 
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]
+        
+        print(f"DEBUG: Retrieved {len(documents)} events from ChromaDB")
         
         context = ""
         retrieved_events = []
@@ -116,7 +120,11 @@ async def investigate(request: QueryRequest):
             context += f"\nEvent Type: {meta.get('event_type')}\nSeverity: {meta.get('severity')}\nSource IP: {meta.get('src_ip')}\nDescription: {meta.get('description')}\n"
 
         # 5. Final Analysis
-        analysis_prompt = f"Analyze these events for query: {user_query}\nEvents: {context}"
+        if not context.strip():
+            print("DEBUG: NO CONTEXT RETRIEVED. LLM will have no data to analyze.")
+        
+        analysis_prompt = f"You are a SOC analyst. Analyze ONLY the retrieved events below.\nUser Query: {user_query}\nRetrieved Events: {context}\n"
+        print(f"DEBUG: Sending prompt to LLM (length: {len(analysis_prompt)})")
         analysis_response = llm.invoke(analysis_prompt)
         
         return {
