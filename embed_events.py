@@ -36,6 +36,14 @@ with open("data/datasets/window_events.jsonl", "r") as f:
 
             text = f"Event Type: {event['event_type']}. Severity: {event['severity']}. Description: {event['description']}"
 
+            # Sanitize metadata: ChromaDB doesn't allow lists in metadata
+            sanitized_meta = {}
+            for k, v in event.items():
+                if isinstance(v, list):
+                    sanitized_meta[k] = ", ".join(map(str, v))
+                else:
+                    sanitized_meta[k] = v
+
             # Get embedding from Ollama
             embedding = embeddings_model.embed_query(text)
 
@@ -43,7 +51,7 @@ with open("data/datasets/window_events.jsonl", "r") as f:
                 ids=[str(idx)],
                 embeddings=[embedding],
                 documents=[text],
-                metadatas=[event]
+                metadatas=[sanitized_meta]
             )
         except Exception as e:
             print(f"Error processing line {idx}: {e}")
