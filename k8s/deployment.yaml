@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: threatlens-app
+  namespace: apps-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: threatlens-app
+  template:
+    metadata:
+      labels:
+        app: threatlens-app
+    spec:
+      containers:
+      - name: threatlens
+        image: ghcr.io/joshi-labs/threatlens:latest
+        ports:
+        - containerPort: 8000

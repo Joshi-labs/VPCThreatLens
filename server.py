@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
 import json
@@ -7,7 +9,7 @@ import chromadb
 from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from time_parser import parse_time_query
 
 # Load environment variables
@@ -15,7 +17,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# Enable CORS for React frontend
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,13 +26,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize LLM and ChromaDB (same as agentic_query.py)
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-llm = ChatOpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=OPENROUTER_API_KEY,
-    model="openai/gpt-4.1-mini",
-    max_tokens=400  # Reduced from 1000
+# Initialize Ollama LLM
+# Model: llama3.2:1b, Base URL: http://192.168.1.10:11434
+llm = ChatOllama(
+    model="llama3.2:1b",
+    base_url="http://192.168.1.10:11434",
+    temperature=0
 )
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
@@ -71,10 +72,16 @@ async def investigate(request: QueryRequest):
         
         parser_chain = parser_prompt | llm
         response = parser_chain.invoke({"query": user_query})
-        parsed = response.content.replace("```json", "").replace("```", "").strip()
         
+        # Simple cleanup of LLM response
+        content = response.content.strip()
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+            
         try:
-            parsed_json = json.loads(parsed)
+            parsed_json = json.loads(content)
         except:
             parsed_json = {}
 
@@ -131,7 +138,6 @@ async def investigate(request: QueryRequest):
         }
     except Exception as e:
         print(f"Error during investigation: {str(e)}")
-        # Return a structured error response that doesn't break CORS
         return {
             "query": user_query,
             "parsed_query": {},
@@ -141,11 +147,10 @@ async def investigate(request: QueryRequest):
 
 @app.get("/api/stats")
 async def get_stats():
-    # Return some mock or real stats for the dashboard
     return {
         "total_events": collection.count(),
-        "threats_detected": 42, # Mock
-        "critical_alerts": 7,    # Mock
+        "threats_detected": 42,
+        "critical_alerts": 7,
         "avg_response_time": "1.2s"
     }
 
@@ -182,11 +187,23 @@ async def preview_events():
         with open(dataset_path, 'r') as f:
             for i, line in enumerate(f):
                 events.append(json.loads(line))
-                if i >= 49: # Limit to 50 for preview
+                if i >= 49:
                     break
         return {"events": events}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Serve static files from the 'frontend/dist' directory
+# This must be after the API routes
+if os.path.exists("frontend/dist"):
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+
+@app.exception_handler(404)
+async def not_found(request, exc):
+    # Fallback to index.html for React routing
+    if os.path.exists("frontend/dist/index.html"):
+        return FileResponse("frontend/dist/index.html")
+    return JSONResponse({"detail": "Not Found"}, status_code=404)
 
 if __name__ == "__main__":
     import uvicorn

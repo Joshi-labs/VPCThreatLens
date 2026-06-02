@@ -112,7 +112,7 @@ function App() {
 
   const fetchRawFiles = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/raw-logs');
+      const res = await fetch('/api/raw-logs');
       if (!res.ok) return;
       const data = await res.json();
       setRawFiles(data.files || []);
@@ -123,7 +123,7 @@ function App() {
     setLoading(true);
     setSelectedRawFile(filename);
     try {
-      const res = await fetch(`http://localhost:8000/api/raw-logs/${filename}`);
+      const res = await fetch(`/api/raw-logs/${filename}`);
       if (!res.ok) throw new Error('Failed to fetch preview');
       const data = await res.json();
       setRawPreview(data.content || '');
@@ -135,7 +135,7 @@ function App() {
 
   const fetchFinalEvents = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/events');
+      const res = await fetch('/api/events');
       if (!res.ok) throw new Error('Failed to fetch events');
       const data = await res.json();
       setFinalEvents(data.events || []);
@@ -148,7 +148,7 @@ function App() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch('http://localhost:8000/api/investigate', {
+      const res = await fetch('/api/investigate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
