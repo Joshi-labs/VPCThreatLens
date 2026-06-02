@@ -1,91 +1,49 @@
 import os
 import json
-
 from dotenv import load_dotenv
+from langchain_ollama import ChatOllama
 
-from langchain_openai import ChatOpenAI
-
-# -----------------------------
-# LOAD ENV
-# -----------------------------
-
+# Load env (though we might not need it for local Ollama)
 load_dotenv()
 
-OPENROUTER_API_KEY = os.getenv(
-    "OPENROUTER_API_KEY"
+# Initialize LLM with local Ollama
+llm = ChatOllama(
+    model="llama3.2:1b",
+    base_url="http://192.168.1.10:11434",
+    temperature=0
 )
-
-# -----------------------------
-# LLM
-# -----------------------------
-
-llm = ChatOpenAI(
-
-    base_url="https://openrouter.ai/api/v1",
-
-    api_key=OPENROUTER_API_KEY,
-
-    model="openai/gpt-4.1-mini",
-
-    max_tokens=200
-)
-
-# -----------------------------
-# PARSE HUMAN TIME
-# -----------------------------
 
 def parse_time_query(user_query):
-
     prompt = f"""
-
 You are a time extraction engine.
-
 Extract:
 - start_time
 - end_time
-
 from the query.
-
 Return ONLY valid JSON.
 
 Time format:
 HH:MM
 
 Examples:
+Query: what happened between 12:10 and 12:30
+Output: {{"start_time": "12:10", "end_time": "12:30"}}
 
-Query:
-what happened between 12:10 and 12:30
+Query: show ssh attacks after 14:00
+Output: {{"start_time": "14:00", "end_time": null}}
 
-Output:
-{{
-    "start_time": "12:10",
-    "end_time": "12:30"
-}}
-
-Query:
-show ssh attacks after 14:00
-
-Output:
-{{
-    "start_time": "14:00",
-    "end_time": null
-}}
-
-User Query:
-{user_query}
-
+User Query: {user_query}
 """
-
     response = llm.invoke(prompt)
-
-    parsed = response.content
-
-    parsed = parsed.replace(
-        "```json",
-        ""
-    ).replace(
-        "```",
-        ""
-    ).strip()
-
-    return json.loads(parsed)
+    content = response.content.strip()
+    
+    # Simple JSON extraction cleanup
+    if "```json" in content:
+        content = content.split("```json")[1].split("```")[0].strip()
+    elif "```" in content:
+        content = content.split("```")[1].split("```")[0].strip()
+        
+    try:
+        return json.loads(content)
+    except:
+        return {"start_time": None, "end_time": None}
