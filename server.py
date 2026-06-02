@@ -9,7 +9,7 @@ import chromadb
 from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from time_parser import parse_time_query
 
 # Load environment variables
@@ -26,12 +26,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Ollama LLM
-# Model: llama3.2:1b, Base URL: http://192.168.1.10:11434
+# Initialize Ollama LLM and Embeddings
 llm = ChatOllama(
     model="llama3.2:1b",
     base_url="http://192.168.1.10:11434",
     temperature=0
+)
+
+embeddings_model = OllamaEmbeddings(
+    model="llama3.2:1b",
+    base_url="http://192.168.1.10:11434"
 )
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
@@ -62,23 +66,16 @@ async def investigate(request: QueryRequest):
 
         # 2. Parse Query with LLM
         parser_prompt = ChatPromptTemplate.from_messages([
-            ("system", """
-            You are a cybersecurity query parser. Convert the user query into JSON.
-            Allowed event types: coordinated_ssh_activity, port_scan, traffic_spike, rejected_activity.
-            Extract: event_type, severity, intent. Return ONLY valid JSON.
-            """),
+            ("system", "You are a cybersecurity query parser. Convert the user query into JSON. Allowed event types: coordinated_ssh_activity, port_scan, traffic_spike, rejected_activity. Extract: event_type, severity, intent. Return ONLY valid JSON."),
             ("human", "{query}")
         ])
         
         parser_chain = parser_prompt | llm
         response = parser_chain.invoke({"query": user_query})
         
-        # Simple cleanup of LLM response
         content = response.content.strip()
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
+        if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
             
         try:
             parsed_json = json.loads(content)
@@ -87,10 +84,8 @@ async def investigate(request: QueryRequest):
 
         # 3. Build Filters
         filters = []
-        if parsed_json.get("severity"):
-            filters.append({"severity": parsed_json["severity"]})
-        if parsed_json.get("event_type"):
-            filters.append({"event_type": parsed_json["event_type"]})
+        if parsed_json.get("severity"): filters.append({"severity": parsed_json["severity"]})
+        if parsed_json.get("event_type"): filters.append({"event_type": parsed_json["event_type"]})
         
         if start_unix and end_unix:
             filters.append({"$and": [{"event_time_start": {"$gte": start_unix}}, {"event_time_start": {"$lte": end_unix}}]})
@@ -100,16 +95,16 @@ async def investigate(request: QueryRequest):
             filters.append({"event_time_start": {"$lte": end_unix}})
 
         where_filter = None
-        if len(filters) == 1:
-            where_filter = filters[0]
-        elif len(filters) > 1:
-            where_filter = {"$and": filters}
+        if len(filters) == 1: where_filter = filters[0]
+        elif len(filters) > 1: where_filter = {"$and": filters}
 
-        # 4. Vector Search
+        # 4. Vector Search (Manual Embedding via Ollama)
+        query_embedding = embeddings_model.embed_query(user_query)
+        
         if where_filter is None:
-            results = collection.query(query_texts=[user_query], n_results=5)
+            results = collection.query(query_embeddings=[query_embedding], n_results=5)
         else:
-            results = collection.query(query_texts=[user_query], n_results=5, where=where_filter)
+            results = collection.query(query_embeddings=[query_embedding], n_results=5, where=where_filter)
 
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]
@@ -121,13 +116,7 @@ async def investigate(request: QueryRequest):
             context += f"\nEvent Type: {meta.get('event_type')}\nSeverity: {meta.get('severity')}\nSource IP: {meta.get('src_ip')}\nDescription: {meta.get('description')}\n"
 
         # 5. Final Analysis
-        analysis_prompt = f"""
-        You are a SOC analyst. Analyze ONLY the retrieved events below.
-        User Query: {user_query}
-        Retrieved Events: {context}
-        Explain: what happened, attack patterns, suspicious activity, possible causes, recommendations.
-        """
-        
+        analysis_prompt = f"Analyze these events for query: {user_query}\nEvents: {context}"
         analysis_response = llm.invoke(analysis_prompt)
         
         return {
@@ -138,27 +127,16 @@ async def investigate(request: QueryRequest):
         }
     except Exception as e:
         print(f"Error during investigation: {str(e)}")
-        return {
-            "query": user_query,
-            "parsed_query": {},
-            "events": [],
-            "analysis": f"INVESTIGATION_FAILED: {str(e)}"
-        }
+        return {"query": user_query, "parsed_query": {}, "events": [], "analysis": f"INVESTIGATION_FAILED: {str(e)}"}
 
 @app.get("/api/stats")
 async def get_stats():
-    return {
-        "total_events": collection.count(),
-        "threats_detected": 42,
-        "critical_alerts": 7,
-        "avg_response_time": "1.2s"
-    }
+    return {"total_events": collection.count(), "threats_detected": 42, "critical_alerts": 7, "avg_response_time": "1.2s"}
 
 @app.get("/api/raw-logs")
 async def list_raw_logs():
     raw_dir = "data/raw"
-    if not os.path.exists(raw_dir):
-        return {"files": []}
+    if not os.path.exists(raw_dir): return {"files": []}
     files = [f for f in os.listdir(raw_dir) if f.endswith(".gz")]
     return {"files": files}
 
@@ -166,47 +144,35 @@ async def list_raw_logs():
 async def preview_raw_log(filename: str):
     import gzip
     file_path = os.path.join("data/raw", filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found")
-    
+    if not os.path.exists(file_path): raise HTTPException(status_code=404, detail="File not found")
     try:
         with gzip.open(file_path, 'rt') as f:
             content = [f.readline() for _ in range(20)]
         return {"content": "".join(content)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/events")
 async def preview_events():
     dataset_path = "data/datasets/events.jsonl"
-    if not os.path.exists(dataset_path):
-        return {"events": []}
-    
+    if not os.path.exists(dataset_path): return {"events": []}
     events = []
     try:
         with open(dataset_path, 'r') as f:
             for i, line in enumerate(f):
                 events.append(json.loads(line))
-                if i >= 49:
-                    break
+                if i >= 49: break
         return {"events": events}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
-# Serve static files from the 'frontend/dist' directory
 static_path = "frontend/dist"
 if os.path.exists(static_path):
     print(f"Serving static files from: {os.path.abspath(static_path)}")
     app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
-else:
-    print(f"Warning: Static path {static_path} not found.")
 
 @app.exception_handler(404)
 async def not_found(request, exc):
-    # Fallback to index.html for React routing
     index_path = os.path.join(static_path, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
+    if os.path.exists(index_path): return FileResponse(index_path)
     return JSONResponse({"detail": "Not Found"}, status_code=404)
 
 if __name__ == "__main__":

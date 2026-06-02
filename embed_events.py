@@ -1,92 +1,51 @@
 import json
 import chromadb
-
-from sentence_transformers import SentenceTransformer
+from langchain_ollama import OllamaEmbeddings
 
 # -----------------------------
-# LOAD EMBEDDING MODEL
+# INITIALIZE OLLAMA EMBEDDINGS
 # -----------------------------
-
-model = SentenceTransformer(
-    "all-MiniLM-L6-v2"
+# This moves the heavy lifting to your local Ollama server
+embeddings_model = OllamaEmbeddings(
+    model="llama3.2:1b",
+    base_url="http://192.168.1.10:11434"
 )
 
 # -----------------------------
 # INITIALIZE CHROMADB
 # -----------------------------
+client = chromadb.PersistentClient(path="./chroma_db")
 
-client = chromadb.PersistentClient(
-    path="./chroma_db"
-)
-
-# Delete old collection if needed
+# Delete old collection to reset with new embedding dimension
 try:
-    client.delete_collection(
-        name="network_events"
-    )
+    client.delete_collection(name="network_events")
 except:
     pass
 
-collection = client.get_or_create_collection(
-    name="network_events"
-)
+collection = client.create_collection(name="network_events")
 
 # -----------------------------
 # LOAD EVENTS
 # -----------------------------
-
-with open(
-    "data/datasets/window_events.jsonl",
-    "r"
-) as f:
-
+with open("data/datasets/window_events.jsonl", "r") as f:
     for idx, line in enumerate(f):
-
         try:
-
             event = json.loads(line)
-
-            # Skip normal activity
-            if (
-                event["event_type"]
-                == "normal_activity"
-            ):
+            if event["event_type"] == "normal_activity":
                 continue
 
-            text = (
+            text = f"Event Type: {event['event_type']}. Severity: {event['severity']}. Description: {event['description']}"
 
-                f"Event Type: "
-                f"{event['event_type']}. "
-
-                f"Severity: "
-                f"{event['severity']}. "
-
-                f"Description: "
-                f"{event['description']}"
-
-            )
-
-            embedding = model.encode(
-                text
-            ).tolist()
+            # Get embedding from Ollama
+            embedding = embeddings_model.embed_query(text)
 
             collection.add(
-
                 ids=[str(idx)],
-
                 embeddings=[embedding],
-
                 documents=[text],
-
                 metadatas=[event]
             )
-
         except Exception as e:
+            print(f"Error processing line {idx}: {e}")
 
-            print(
-                f"Error processing line {idx}: {e}"
-            )
-
-print(
-    "Embeddings stored in ChromaDB."
-)
+print("Embeddings stored in ChromaDB using Ollama.")
