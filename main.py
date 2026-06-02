@@ -93,7 +93,7 @@ if page == "Main Runtime":
             else:
                 with st.spinner("🔍 Agentic RAG in progress..."):
                     process = subprocess.Popen(
-                        [r".\.venv\Scripts\python.exe", "-u", "agentic_query.py"],
+                        ["python", "-u", "server.py"],
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
