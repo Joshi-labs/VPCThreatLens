@@ -6,21 +6,25 @@ RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: Backend (serves frontend too)
+# Stage 2: Backend
 FROM python:3.11-slim
 WORKDIR /app
 
-# Copy requirements and install dependencies
+# Install dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend source
 COPY . .
 
-# Copy built frontend from Stage 1
+# Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Expose only port 8000
+# Ensure the entrypoint script is executable
+RUN chmod +x entrypoint.sh
+
+# Expose port
 EXPOSE 8000
 
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use the entrypoint script to initialize DB and start server
+ENTRYPOINT ["./entrypoint.sh"]
