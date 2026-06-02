@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import os
 import json
@@ -194,15 +194,19 @@ async def preview_events():
         raise HTTPException(status_code=500, detail=str(e))
 
 # Serve static files from the 'frontend/dist' directory
-# This must be after the API routes
-if os.path.exists("frontend/dist"):
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+static_path = "frontend/dist"
+if os.path.exists(static_path):
+    print(f"Serving static files from: {os.path.abspath(static_path)}")
+    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
+else:
+    print(f"Warning: Static path {static_path} not found.")
 
 @app.exception_handler(404)
 async def not_found(request, exc):
     # Fallback to index.html for React routing
-    if os.path.exists("frontend/dist/index.html"):
-        return FileResponse("frontend/dist/index.html")
+    index_path = os.path.join(static_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return JSONResponse({"detail": "Not Found"}, status_code=404)
 
 if __name__ == "__main__":
