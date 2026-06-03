@@ -1,24 +1,24 @@
 import json
 import chromadb
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+from llm_client import client
 
 # -----------------------------
 # INITIALIZE LOCAL EMBEDDINGS
 # -----------------------------
-embeddings_model = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+embeddings_model = client.get_embeddings()
 
 # -----------------------------
 # INITIALIZE CHROMADB
 # -----------------------------
-client = chromadb.PersistentClient(path="./chroma_db")
+client_db = chromadb.PersistentClient(path="./chroma_db")
 
 # Delete old collection to reset with new embedding dimension
 try:
-    client.delete_collection(name="network_events")
+    client_db.delete_collection(name="network_events")
 except:
     pass
 
-collection = client.create_collection(name="network_events")
+collection = client_db.create_collection(name="network_events")
 
 # -----------------------------
 # LOAD EVENTS
@@ -40,7 +40,7 @@ with open("data/datasets/window_events.jsonl", "r") as f:
                 else:
                     sanitized_meta[k] = v
 
-            # Get embedding from Ollama
+            # Get embedding
             embedding = embeddings_model.embed_query(text)
 
             collection.add(
@@ -52,4 +52,4 @@ with open("data/datasets/window_events.jsonl", "r") as f:
         except Exception as e:
             print(f"Error processing line {idx}: {e}")
 
-print("Embeddings stored in ChromaDB using local FastEmbed model.")
+print("Embeddings stored in ChromaDB using centralized client embeddings.")

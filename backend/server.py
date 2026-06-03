@@ -7,16 +7,11 @@ import os
 import json
 import chromadb
 from datetime import datetime
-from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
 from time_parser import parse_time_query
-
-# Load environment variables
-load_dotenv()
+from llm_client import client
 
 app = FastAPI()
-
 
 # Enable CORS
 app.add_middleware(
@@ -27,18 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-
-# Initialize OpenRouter LLM (via LangChain OpenAI adapter)
-llm = ChatOpenAI(
-    model="google/gemini-2.5-flash-lite",
-    openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-    openai_api_base="https://openrouter.ai/api/v1",
-    temperature=0
-)
-
-# Use FastEmbed for much smaller container size (avoids torch)
-embeddings_model = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+# Initialize from centralized client
+llm = client.llm
+embeddings_model = client.get_embeddings()
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 collection = chroma_client.get_or_create_collection(name="network_events")
@@ -67,15 +53,17 @@ async def investigate(request: QueryRequest):
         end_unix = hhmm_to_unix(time_data.get("end_time")) if time_data.get("end_time") else None
 
         # 2. Parse Query with LLM
-        parser_prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a cybersecurity query parser. Convert the user query into JSON. Allowed event types: coordinated_ssh_activity, port_scan, traffic_spike, rejected_activity. Extract: event_type, severity, intent. Return ONLY valid JSON."),
-            ("human", "{query}")
-        ])
-        
-        parser_chain = parser_prompt | llm
-        response = parser_chain.invoke({"query": user_query})
-        
-        content = response.content.strip()
+        parser_prompt = f"""
+You are a cybersecurity query parser. Convert the user query into JSON. 
+Allowed event types: coordinated_ssh_activity, port_scan, traffic_spike, rejected_activity. 
+Extract: event_type, severity, intent. 
+Return ONLY valid JSON.
+
+Query: {user_query}
+"""
+        # Using chat method with cache support
+        content = client.chat(parser_prompt)
+        content = content.strip()
         if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
             
@@ -100,7 +88,7 @@ async def investigate(request: QueryRequest):
         if len(filters) == 1: where_filter = filters[0]
         elif len(filters) > 1: where_filter = {"$and": filters}
 
-        # 4. Vector Search (Manual Embedding via Ollama)
+        # 4. Vector Search
         print(f"DEBUG: Vectorizing user query: {user_query}")
         query_embedding = embeddings_model.embed_query(user_query)
         
@@ -122,18 +110,15 @@ async def investigate(request: QueryRequest):
             context += f"\nEvent Type: {meta.get('event_type')}\nSeverity: {meta.get('severity')}\nSource IP: {meta.get('src_ip')}\nDescription: {meta.get('description')}\n"
 
         # 5. Final Analysis
-        if not context.strip():
-            print("DEBUG: NO CONTEXT RETRIEVED. LLM will have no data to analyze.")
-        
         analysis_prompt = f"You are a SOC analyst. Analyze ONLY the retrieved events below.\nUser Query: {user_query}\nRetrieved Events: {context}\n"
         print(f"DEBUG: Sending prompt to LLM (length: {len(analysis_prompt)})")
-        analysis_response = llm.invoke(analysis_prompt)
+        analysis_response_content = client.chat(analysis_prompt)
         
         return {
             "query": user_query,
             "parsed_query": parsed_json,
             "events": retrieved_events,
-            "analysis": analysis_response.content
+            "analysis": analysis_response_content
         }
     except Exception as e:
         print(f"Error during investigation: {str(e)}")

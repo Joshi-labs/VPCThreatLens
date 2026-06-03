@@ -2,30 +2,14 @@ import os
 import json
 import chromadb
 from datetime import datetime
-from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from time_parser import parse_time_query
+from llm_client import client
 
 # -----------------------------
-# LOAD ENV
+# INITIALIZE
 # -----------------------------
-load_dotenv()
-
-# -----------------------------
-# OPENROUTER CONFIG
-# -----------------------------
-llm = ChatOpenAI(
-    model="google/gemini-2.5-flash-lite",
-    openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-    openai_api_base="https://openrouter.ai/api/v1",
-    temperature=0
-)
-
-# Use FastEmbed for much smaller container size (avoids torch)
-embeddings_model = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
-
+embeddings_model = client.get_embeddings()
 
 # -----------------------------
 # CHROMADB
@@ -43,14 +27,6 @@ def hhmm_to_unix(hhmm):
     combined = REFERENCE_DATE.replace(hour=dt.hour, minute=dt.minute, second=0)
     return int(combined.timestamp())
 
-# -----------------------------
-# QUERY PARSER PROMPT
-# -----------------------------
-parser_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a cybersecurity query parser. Convert the user query into JSON. Map user phrases intelligently. Return ONLY valid JSON."),
-    ("human", "{query}")
-])
-
 user_query = input("\nEnter investigation query: ")
 
 time_data = parse_time_query(user_query)
@@ -60,9 +36,15 @@ end_unix = hhmm_to_unix(time_data["end_time"]) if time_data.get("end_time") else
 # -----------------------------
 # PARSE QUERY
 # -----------------------------
-parser_chain = parser_prompt | llm
-response = parser_chain.invoke({"query": user_query})
-content = response.content.strip()
+parser_prompt = f"""
+You are a cybersecurity query parser. Convert the user query into JSON. 
+Map user phrases intelligently. Return ONLY valid JSON.
+
+Query: {user_query}
+"""
+
+content = client.chat(parser_prompt)
+content = content.strip()
 
 if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
 elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
@@ -92,7 +74,7 @@ if len(filters) == 1: where_filter = filters[0]
 elif len(filters) > 1: where_filter = {"$and": filters}
 
 # -----------------------------
-# VECTOR SEARCH (Manual Embedding)
+# VECTOR SEARCH
 # -----------------------------
 query_embedding = embeddings_model.embed_query(user_query)
 
@@ -113,6 +95,6 @@ for doc, meta in zip(documents, metadatas):
 analysis_prompt = f"Analyze these events for query: {user_query}\nEvents: {context}"
 
 print("\n========== ANALYSIS ==========\n")
-for chunk in llm.stream(analysis_prompt):
-    print(chunk.content, end="", flush=True)
+analysis_result = client.chat(analysis_prompt)
+print(analysis_result)
 print("\n")

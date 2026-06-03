@@ -1,18 +1,6 @@
 import os
 import json
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-
-# Load env
-load_dotenv()
-
-# Initialize LLM with OpenRouter
-llm = ChatOpenAI(
-    model="google/gemini-2.5-flash-lite",
-    openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-    openai_api_base="https://openrouter.ai/api/v1",
-    temperature=0
-)
+from llm_client import client
 
 def parse_time_query(user_query):
     prompt = f"""
@@ -35,8 +23,8 @@ Output: {{"start_time": "14:00", "end_time": null}}
 
 User Query: {user_query}
 """
-    response = llm.invoke(prompt)
-    content = response.content.strip()
+    content = client.chat(prompt)
+    content = content.strip()
     
     # Simple JSON extraction cleanup
     if "```json" in content:
