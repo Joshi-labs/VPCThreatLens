@@ -13,7 +13,7 @@ load_dotenv()
 # OPENROUTER CONFIG
 # -----------------------------
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "google/gemini-flash-1.5"
+OPENROUTER_MODEL = "google/gemini-2.5-flash-lite"
 
 def openrouter_chat(prompt):
     headers = {

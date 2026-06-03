@@ -31,7 +31,7 @@ from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 # Initialize OpenRouter LLM (via LangChain OpenAI adapter)
 llm = ChatOpenAI(
-    model="google/gemini-flash-1.5",
+    model="google/gemini-2.5-flash-lite",
     openai_api_key=os.getenv("OPENROUTER_API_KEY"),
     openai_api_base="https://openrouter.ai/api/v1",
     temperature=0
