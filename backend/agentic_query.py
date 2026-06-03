@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+from time_parser import parse_time_query
 
 # -----------------------------
 # LOAD ENV

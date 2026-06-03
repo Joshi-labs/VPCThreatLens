@@ -1,15 +1,16 @@
 import os
 import json
 from dotenv import load_dotenv
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 
-# Load env (though we might not need it for local Ollama)
+# Load env
 load_dotenv()
 
-# Initialize LLM with local Ollama
-llm = ChatOllama(
-    model="llama3.2:1b",
-    base_url="http://192.168.1.10:11434",
+# Initialize LLM with OpenRouter
+llm = ChatOpenAI(
+    model="google/gemini-flash-1.5",
+    openai_api_key=os.getenv("OPENROUTER_API_KEY"),
+    openai_api_base="https://openrouter.ai/api/v1",
     temperature=0
 )
 
