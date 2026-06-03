@@ -1,18 +1,15 @@
 import json
 import chromadb
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # -----------------------------
-# INITIALIZE OPENAI EMBEDDINGS
+# INITIALIZE LOCAL EMBEDDINGS
 # -----------------------------
-embeddings_model = OpenAIEmbeddings(
-    model="text-embedding-3-small",
-    openai_api_key=os.getenv("OPENAI_API_KEY")
-)
+embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # -----------------------------
 # INITIALIZE CHROMADB
@@ -59,4 +56,4 @@ with open("data/datasets/window_events.jsonl", "r") as f:
         except Exception as e:
             print(f"Error processing line {idx}: {e}")
 
-print("Embeddings stored in ChromaDB using OpenAI.")
+print("Embeddings stored in ChromaDB using local HuggingFace model.")

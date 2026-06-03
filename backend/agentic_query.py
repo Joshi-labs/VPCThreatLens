@@ -4,7 +4,8 @@ import chromadb
 from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from time_parser import parse_time_query
 
 # -----------------------------
@@ -22,10 +23,8 @@ llm = ChatOpenAI(
     temperature=0
 )
 
-embeddings_model = OpenAIEmbeddings(
-    model="text-embedding-3-small",
-    openai_api_key=os.getenv("OPENAI_API_KEY")
-)
+# Use a local embedding model to remove OpenAI dependency entirely
+embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # -----------------------------
 # CHROMADB

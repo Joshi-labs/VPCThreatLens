@@ -9,7 +9,7 @@ import chromadb
 from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 from time_parser import parse_time_query
 
 # Load environment variables
@@ -27,6 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from langchain_community.embeddings import HuggingFaceEmbeddings
+
 # Initialize OpenRouter LLM (via LangChain OpenAI adapter)
 llm = ChatOpenAI(
     model="google/gemini-flash-1.5",
@@ -35,11 +37,8 @@ llm = ChatOpenAI(
     temperature=0
 )
 
-# For embeddings, we'll use a cheap OpenAI model
-embeddings_model = OpenAIEmbeddings(
-    model="text-embedding-3-small",
-    openai_api_key=os.getenv("OPENAI_API_KEY") # User might need both, or I can try to find an embedding model on OpenRouter
-)
+# Use a local embedding model to remove OpenAI dependency entirely
+embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 collection = chroma_client.get_or_create_collection(name="network_events")
@@ -109,7 +108,7 @@ async def investigate(request: QueryRequest):
             results = collection.query(query_embeddings=[query_embedding], n_results=5)
         else:
             print(f"DEBUG: Applying filter: {where_filter}")
-            results = collection.query(query_embeddings=[query_embeddings], n_results=5, where=where_filter)
+            results = collection.query(query_embeddings=[query_embedding], n_results=5, where=where_filter)
 
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]

@@ -24,8 +24,3 @@ spec:
             secretKeyRef:
               name: threatlens-secrets
               key: OPENROUTER_API_KEY
-        - name: OPENAI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: threatlens-secrets
-              key: OPENAI_API_KEY
