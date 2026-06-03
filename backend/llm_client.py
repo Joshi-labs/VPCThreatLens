@@ -9,7 +9,7 @@ from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 load_dotenv()
 
 # --- CONFIGURATION ---
-MODEL_NAME = "google/gemini-2.0-flash-lite-preview-02-05" # Updated to Flash Lite
+MODEL_NAME = "google/gemini-2.5-flash-lite" # Updated to Flash Lite
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MAX_TOKENS = 1000
 CACHE_DIR = "cache"
