@@ -4,7 +4,7 @@ import chromadb
 from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from time_parser import parse_time_query
 
 # -----------------------------
@@ -13,20 +13,18 @@ from time_parser import parse_time_query
 load_dotenv()
 
 # -----------------------------
-# OLLAMA CONFIG
+# OPENROUTER CONFIG
 # -----------------------------
-BASE_URL = "http://192.168.1.10:11434"
-MODEL = "llama3.2:1b"
-
-llm = ChatOllama(
-    model=MODEL,
-    base_url=BASE_URL,
+llm = ChatOpenAI(
+    model="google/gemini-flash-1.5",
+    openai_api_key=os.getenv("OPENROUTER_API_KEY"),
+    openai_api_base="https://openrouter.ai/api/v1",
     temperature=0
 )
 
-embeddings_model = OllamaEmbeddings(
-    model=MODEL,
-    base_url=BASE_URL
+embeddings_model = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    openai_api_key=os.getenv("OPENAI_API_KEY")
 )
 
 # -----------------------------

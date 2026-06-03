@@ -1,14 +1,17 @@
 import json
 import chromadb
-from langchain_ollama import OllamaEmbeddings
+from langchain_openai import OpenAIEmbeddings
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # -----------------------------
-# INITIALIZE OLLAMA EMBEDDINGS
+# INITIALIZE OPENAI EMBEDDINGS
 # -----------------------------
-# This moves the heavy lifting to your local Ollama server
-embeddings_model = OllamaEmbeddings(
-    model="llama3.2:1b",
-    base_url="http://192.168.1.10:11434"
+embeddings_model = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    openai_api_key=os.getenv("OPENAI_API_KEY")
 )
 
 # -----------------------------
@@ -56,4 +59,4 @@ with open("data/datasets/window_events.jsonl", "r") as f:
         except Exception as e:
             print(f"Error processing line {idx}: {e}")
 
-print("Embeddings stored in ChromaDB using Ollama.")
+print("Embeddings stored in ChromaDB using OpenAI.")

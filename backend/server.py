@@ -9,7 +9,7 @@ import chromadb
 from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from time_parser import parse_time_query
 
 # Load environment variables
@@ -27,16 +27,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Ollama LLM and Embeddings
-llm = ChatOllama(
-    model="llama3.2:1b",
-    base_url="http://192.168.1.10:11434",
+# Initialize OpenRouter LLM (via LangChain OpenAI adapter)
+llm = ChatOpenAI(
+    model="google/gemini-flash-1.5",
+    openai_api_key=os.getenv("OPENROUTER_API_KEY"),
+    openai_api_base="https://openrouter.ai/api/v1",
     temperature=0
 )
 
-embeddings_model = OllamaEmbeddings(
-    model="llama3.2:1b",
-    base_url="http://192.168.1.10:11434"
+# For embeddings, we'll use a cheap OpenAI model
+embeddings_model = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    openai_api_key=os.getenv("OPENAI_API_KEY") # User might need both, or I can try to find an embedding model on OpenRouter
 )
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")

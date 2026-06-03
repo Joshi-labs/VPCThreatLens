@@ -10,19 +10,24 @@ import requests
 load_dotenv()
 
 # -----------------------------
-# OLLAMA CONFIG
+# OPENROUTER CONFIG
 # -----------------------------
-OLLAMA_BASE_URL = "http://192.168.1.10:11434"
-OLLAMA_MODEL = "llama3.2:1b"
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = "google/gemini-flash-1.5"
 
-def ollama_chat(prompt):
-    payload = {
-        "model": OLLAMA_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False
+def openrouter_chat(prompt):
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
     }
-    response = requests.post(f"{OLLAMA_BASE_URL}/api/chat", json=payload)
-    return response.json()["message"]["content"]
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+    if response.status_code != 200:
+        return f"Error: {response.status_code} - {response.text}"
+    return response.json()["choices"][0]["message"]["content"]
 
 # -----------------------------
 # CHROMADB
@@ -80,5 +85,5 @@ Explain: what is happening, attack patterns, severity, suspicious behavior, reco
 # LLM CALL
 # -----------------------------
 print("\n========== ANALYSIS ==========\n")
-analysis = ollama_chat(prompt)
+analysis = openrouter_chat(prompt)
 print(analysis)
