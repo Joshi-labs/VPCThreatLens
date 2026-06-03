@@ -2,7 +2,7 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci --silent
 COPY frontend/ ./
 RUN npm run build
 
@@ -10,7 +10,7 @@ RUN npm run build
 FROM python:3.11-slim
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (using FastEmbed which is much lighter than torch)
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -5,8 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from time_parser import parse_time_query
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 # -----------------------------
 # LOAD ENV
@@ -23,8 +22,9 @@ llm = ChatOpenAI(
     temperature=0
 )
 
-# Use a local embedding model to remove OpenAI dependency entirely
-embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# Use FastEmbed for much smaller container size (avoids torch)
+embeddings_model = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+
 
 # -----------------------------
 # CHROMADB

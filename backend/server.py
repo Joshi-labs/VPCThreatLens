@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 # Initialize OpenRouter LLM (via LangChain OpenAI adapter)
 llm = ChatOpenAI(
@@ -37,8 +37,8 @@ llm = ChatOpenAI(
     temperature=0
 )
 
-# Use a local embedding model to remove OpenAI dependency entirely
-embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# Use FastEmbed for much smaller container size (avoids torch)
+embeddings_model = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 collection = chroma_client.get_or_create_collection(name="network_events")

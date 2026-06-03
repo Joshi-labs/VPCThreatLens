@@ -2,3 +2,9 @@
 frontend/node_modules
 __pycache__
 .git
+chroma_db
+data/raw
+data/uncompressed
+data/uncompressed copy
+node_modules
+.rest

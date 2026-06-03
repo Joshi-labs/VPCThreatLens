@@ -1,15 +1,11 @@
 import json
 import chromadb
-from langchain_community.embeddings import HuggingFaceEmbeddings
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 # -----------------------------
 # INITIALIZE LOCAL EMBEDDINGS
 # -----------------------------
-embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings_model = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
 # -----------------------------
 # INITIALIZE CHROMADB
@@ -56,4 +52,4 @@ with open("data/datasets/window_events.jsonl", "r") as f:
         except Exception as e:
             print(f"Error processing line {idx}: {e}")
 
-print("Embeddings stored in ChromaDB using local HuggingFace model.")
+print("Embeddings stored in ChromaDB using local FastEmbed model.")
