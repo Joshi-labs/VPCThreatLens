@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import cloudArch from './assets/cloud.png';
+import systemArch from './assets/system.png';
 
 // --- Minimal Icons ---
 const ShieldIcon = () => (
@@ -327,27 +329,97 @@ function App() {
         )}
 
         {currentPage === 'architecture' && (
-          <div className="max-w-3xl mx-auto space-y-10">
-            <h2 className="text-xl font-bold uppercase text-white underline underline-offset-8">ARCH_DECISIONS</h2>
-            <div className="space-y-8 text-xs leading-relaxed text-zinc-400">
-                <section className="space-y-2">
-                    <h4 className="font-bold text-zinc-200">01 / REAL DATA CAPTURE</h4>
-                    <p>
-                        The data used in this platform was captured from a live VPC on AWS. It contains authentic attack patterns like SSH brute-forcing and port scanning. The environment was de-provisioned to ensure no production secrets or IP addresses remain vulnerable.
-                    </p>
-                </section>
-                <section className="space-y-2">
-                    <h4 className="font-bold text-zinc-200">02 / AGENTIC RAG</h4>
-                    <p>
-                        We use a Retrieval-Augmented Generation approach. Unlike static dashboards, the agent can correlate events across time windows and provide a narrative explanation of the attack lifecycle.
-                    </p>
-                </section>
-                <section className="space-y-2">
-                    <h4 className="font-bold text-zinc-200">03 / MINIMALIST STACK</h4>
-                    <p>
-                        FastAPI for the backend, ChromaDB for vector storage, and React for the frontend. No unnecessary bloat—just pure data processing and intelligence.
-                    </p>
-                </section>
+          <div className="max-w-5xl mx-auto space-y-16 py-10">
+            <header className="space-y-4 border-b border-zinc-900 pb-10">
+              <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">SYSTEM_CORE</h1>
+              <p className="text-zinc-500 text-xs tracking-[0.3em] uppercase">Deep Dive into ThreatLens Architecture</p>
+            </header>
+
+            {/* Section 1: Cloud */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl font-black text-zinc-800">01</span>
+                  <h2 className="text-xl font-bold uppercase text-white tracking-tight">Cloud_Infrastructure</h2>
+                </div>
+                <div className="space-y-4 text-xs leading-relaxed text-zinc-400 font-sans">
+                  <p>
+                    The foundation of ThreatLens is built on authentic AWS telemetry. We deployed a custom VPC environment featuring EC2 instances running NGINX and public endpoints to simulate a production surface.
+                  </p>
+                  <p>
+                    <span className="text-zinc-200 font-bold italic">VPC Flow Logs</span> are captured at 1-minute intervals and aggregated in S3. To ensure high-signal data, we developed traffic injection scripts that simulate both normal user patterns and sophisticated attack vectors including coordinated SSH brute-forcing and stealthy port reconnaissance.
+                  </p>
+                  <ul className="space-y-2 pt-4">
+                    <li className="flex items-start gap-2">
+                      <span className="text-zinc-100 mt-1">▪</span>
+                      <span>Real-world traffic de-provisioned for secure analysis.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-zinc-100 mt-1">▪</span>
+                      <span>JSONL normalization for high-performance parsing.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div className="border border-zinc-900 p-2 bg-zinc-950/50 group overflow-hidden">
+                <img src={cloudArch} alt="Cloud Architecture" className="w-full grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700 ease-in-out" />
+                <div className="mt-2 text-[9px] text-zinc-700 font-mono text-center uppercase tracking-widest">Fig 01 // AWS_TELEMETRY_PLANE</div>
+              </div>
+            </div>
+
+            {/* Section 2: System Logic */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+              <div className="order-2 md:order-1 border border-zinc-900 p-2 bg-zinc-950/50 group overflow-hidden">
+                <img src={systemArch} alt="System Architecture" className="w-full grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700 ease-in-out" />
+                <div className="mt-2 text-[9px] text-zinc-700 font-mono text-center uppercase tracking-widest">Fig 02 // AGENTIC_RAG_PIPELINE</div>
+              </div>
+              <div className="order-1 md:order-2 space-y-6">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl font-black text-zinc-800">02</span>
+                  <h2 className="text-xl font-bold uppercase text-white tracking-tight">Intelligence_Engine</h2>
+                </div>
+                <div className="space-y-4 text-xs leading-relaxed text-zinc-400 font-sans">
+                  <p>
+                    The transition from raw bytes to security intelligence happens through our <span className="text-zinc-200 font-bold">Window Analysis</span> engine. Instead of analyzing isolated packets, we correlate traffic in 60-second temporal windows.
+                  </p>
+                  <p>
+                    Events are vectorized using <span className="text-zinc-200 font-bold italic">SentenceTransformers (all-MiniLM-L6-v2)</span> and stored in <span className="text-zinc-200 font-bold italic">ChromaDB</span>. This enables a Hybrid Retrieval strategy: Semantic search identifies intent-based matches, while structured metadata filters ensure temporal and severity precision.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 pt-4">
+                    <div className="border border-zinc-900 p-3 bg-black">
+                      <div className="text-[10px] font-bold text-white uppercase mb-1">Vector_DB</div>
+                      <div className="text-[9px] text-zinc-500 uppercase">ChromaDB Persistence</div>
+                    </div>
+                    <div className="border border-zinc-900 p-3 bg-black">
+                      <div className="text-[10px] font-bold text-white uppercase mb-1">LLM_Core</div>
+                      <div className="text-[9px] text-zinc-500 uppercase">GPT-4.1-mini Reasoning</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Engineering Specs */}
+            <div className="border border-zinc-900 bg-zinc-950 p-8 space-y-6">
+               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.4em]">TECH_STACK_MANIFEST</h3>
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                  <div className="space-y-1">
+                    <div className="text-white font-bold">FastAPI</div>
+                    <div className="text-[9px] text-zinc-600 uppercase">Async Backend</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-white font-bold">SentenceTransformers</div>
+                    <div className="text-[9px] text-zinc-600 uppercase">Embedding Layer</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-white font-bold">OpenRouter</div>
+                    <div className="text-[9px] text-zinc-600 uppercase">LLM Orchestration</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-white font-bold">TypeScript</div>
+                    <div className="text-[9px] text-zinc-600 uppercase">Strict Frontend</div>
+                  </div>
+               </div>
             </div>
           </div>
         )}
